@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Task Planner</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #00ca8e;
+            padding-bottom: 15px;
+        }
+        
+        h1 {
+            color: #00ca8e;
+            font-weight: 700;
+        }
+        
+        .task-form {
+            margin-bottom: 30px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #00ca8e;
+        }
+        
+        .btn-emerald {
+            background-color: #00ca8e;
+            color: #000;
+            border: none;
+            font-weight: 600;
+        }
+        
+        .btn-emerald:hover {
+            background-color: #00b77e;
+            color: #000;
+        }
+        
+        .form-control {
+            background-color: #2d2d2d;
+            border: 1px solid #444;
+            color: #e0e0e0;
+        }
+        
+        .form-control:focus {
+            background-color: #2d2d2d;
+            border-color: #00ca8e;
+            color: #e0e0e0;
+            box-shadow: 0 0 0 0.25rem rgba(0, 202, 142, 0.25);
+        }
+        
+        .task-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .task-item {
+            background-color: #1e1e1e;
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #00ca8e;
+            transition: all 0.3s ease;
+        }
+        
+        .task-item:hover {
+            background-color: #2a2a2a;
+        }
+        
+        .delete-btn {
+            background-color: transparent;
+            color: #ff6b6b;
+            border: 1px solid #ff6b6b;
+            border-radius: 5px;
+            padding: 5px 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .delete-btn:hover {
+            background-color: #ff6b6b;
+            color: #000;
+        }
+        
+        .task-text {
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .current-date {
+            color: #00ca8e;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        
+        .time-display {
+            color: #aaa;
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+        
+        .no-tasks {
+            text-align: center;
+            font-style: italic;
+            color: #888;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="header">
+            <h1>Daily Task Planner</h1>
+            <div class="current-date" id="currentDate"></div>
+            <div class="time-display" id="currentTime"></div>
+        </div>
+        
+        <div class="task-form">
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="taskInput" placeholder="Enter a new task..." aria-label="New task">
+                <button class="btn btn-emerald" type="button" id="addTaskBtn">Add Task</button>
+            </div>
+        </div>
+        
+        <div class="task-container">
+            <h3>Today's Tasks</h3>
+            <ul class="task-list" id="taskList">
+                <!-- Tasks will be added here dynamically -->
+            </ul>
+            <div class="no-tasks" id="noTasks">No tasks added yet. Add a task to get started!</div>
+        </div>
+    </div>
+    
+    <!-- jQuery and Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        $(document).ready(function() {
+            // Initialize variables
+            let tasks = [];
+            let currentDay = new Date().getDate();
+            
+            // Update date and time
+            function updateDateTime() {
+                const now = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                $('#currentDate').text(now.toLocaleDateString('en-US', options));
+                
+                const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+                $('#currentTime').text(now.toLocaleTimeString('en-US', timeOptions));
+                
+                // Check if day has changed
+                if (now.getDate() !== currentDay) {
+                    resetTasks();
+                    currentDay = now.getDate();
+                }
+                
+                // Check if it's midnight (00:00)
+                if (now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0) {
+                    resetTasks();
+                }
+            }
+            
+            // Initial date/time update and start interval
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Load tasks from cookies
+            function loadTasks() {
+                const storedTasks = getCookie('dailyTasks');
+                if (storedTasks) {
+                    tasks = JSON.parse(storedTasks);
+                    renderTasks();
+                }
+            }
+            
+            // Save tasks to cookies
+            function saveTasks() {
+                setCookie('dailyTasks', JSON.stringify(tasks), 1); // Expires in 1 day
+            }
+            
+            // Reset tasks (clear all)
+            function resetTasks() {
+                tasks = [];
+                saveTasks();
+                renderTasks();
+            }
+            
+            // Render tasks to the DOM
+            function renderTasks() {
+                const taskList = $('#taskList');
+                taskList.empty();
+                
+                if (tasks.length === 0) {
+                    $('#noTasks').show();
+                } else {
+                    $('#noTasks').hide();
+                    
+                    tasks.forEach((task, index) => {
+                        const taskItem = $('<li class="task-item"></li>');
+                        const taskText = $('<p class="task-text"></p>').text(task);
+                        const deleteBtn = $('<button class="delete-btn">Delete</button>');
+                        
+                        // Add delete functionality
+                        deleteBtn.on('click', function() {
+                            deleteTask(index);
+                        });
+                        
+                        taskItem.append(taskText, deleteBtn);
+                        taskList.append(taskItem);
+                    });
+                }
+            }
+            
+            // Add a new task
+            function addTask() {
+                const taskInput = $('#taskInput');
+                const taskText = taskInput.val().trim();
+                
+                if (taskText) {
+                    tasks.push(taskText);
+                    saveTasks();
+                    renderTasks();
+                    taskInput.val('');
+                }
+            }
+            
+            // Delete a task
+            function deleteTask(index) {
+                tasks.splice(index, 1);
+                saveTasks();
+                renderTasks();
+            }
+            
+            // Set a cookie
+            function setCookie(name, value, days) {
+                let expires = '';
+                if (days) {
+                    const date = new Date();
+                    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                    expires = '; expires=' + date.toUTCString();
+                }
+                document.cookie = name + '=' + (value || '') + expires + '; path=/';
+            }
+            
+            // Get a cookie
+            function getCookie(name) {
+                const nameEQ = name + '=';
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    let cookie = cookies[i];
+                    while (cookie.charAt(0) === ' ') {
+                        cookie = cookie.substring(1, cookie.length);
+                    }
+                    if (cookie.indexOf(nameEQ) === 0) {
+                        return cookie.substring(nameEQ.length, cookie.length);
+                    }
+                }
+                return null;
+            }
+            
+            // Event listeners
+            $('#addTaskBtn').on('click', addTask);
+            $('#taskInput').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    addTask();
+                }
+            });
+            
+            // Initialize
+            loadTasks();
+        });
+    </script>
+</body>
+</html>
